@@ -19,6 +19,7 @@ export interface Product {
   price: number;
   inStock: boolean;
   description?: string;
+  stockQuantity: number;
 }
 
 export interface PizzaOrder {
@@ -56,10 +57,14 @@ export interface Order {
   customer: Customer;
   items: OrderItem[];
   totalPrice: number;
-  status: 'nao-iniciado' | 'em-andamento' | 'finalizado';
+  status: 'nao-iniciado' | 'em-andamento' | 'finalizado' | 'entregue';
   createdAt: Date;
   updatedAt: Date;
   observations?: string;
+  deliveryPerson?: string;
+  scheduledDateTime?: Date;
+  isScheduled: boolean;
+  deliveredAt?: Date;
 }
 
 export interface PizzaFlavor {
@@ -74,4 +79,12 @@ export interface EsfihaFlavor {
   name: string;
   category: 'tradicional' | 'premium' | 'especial';
   price: number;
+}
+
+export interface DeliveryStats {
+  deliveryPerson: string;
+  totalDeliveries: number;
+  todayDeliveries: number;
+  totalValue: number;
+  avgDeliveryTime?: number;
 }

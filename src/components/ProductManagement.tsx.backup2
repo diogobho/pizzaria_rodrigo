@@ -1,89 +1,42 @@
 import React, { useState } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { Package, Plus, Search, Edit, Check, X } from 'lucide-react';
 import { Product } from '../types';
-import { Search, Plus, Edit, Check, X, Package, Pizza as PizzaIcon, Coffee } from 'lucide-react';
 
 const ProductManagement: React.FC = () => {
   const { state, dispatch } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('todos');
-  const [showNewProduct, setShowNewProduct] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Product>>({});
+  const [showNewProduct, setShowNewProduct] = useState(false);
   const [newProductForm, setNewProductForm] = useState<Partial<Product>>({
     name: '',
     category: 'bebida',
     price: 0,
     inStock: true,
-    stockQuantity: 0,
   });
 
   const categories = {
-    todos: 'Todos',
-    massas: 'Controle de Massas',
-    bebida: 'Bebidas',
+    'all': 'Todos',
     'pizza-tradicional': 'Pizza Tradicional',
-    'pizza-premium': 'Pizza Premium', 
+    'pizza-premium': 'Pizza Premium',
     'pizza-especial': 'Pizza Especial',
     'esfiha-tradicional': 'Esfiha Tradicional',
     'esfiha-premium': 'Esfiha Premium',
     'esfiha-especial': 'Esfiha Especial',
+    'bebida': 'Bebidas',
   };
 
-  // Função para obter quantidade de massa
-  const getMassaQuantity = (type: 'pizza' | 'esfiha') => {
-    const massa = state.products.find(p => p.id === `massa-${type}`);
-    return massa ? massa.stockQuantity : 0;
-  };
-
-  // Combinar todos os produtos
-  const allProducts = [
-    // Controle de Massas (destacados)
-    ...state.products.filter(p => p.id.startsWith('massa-')),
-    
-    // Bebidas regulares
-    ...state.products.filter(p => !p.id.startsWith('massa-')),
-    
-    // Sabores de Pizza (exibir quantidade da massa)
-    ...state.pizzaFlavors.map(flavor => ({
-      id: `pizza-${flavor.id}`,
-      name: `Pizza ${flavor.name}`,
-      category: `pizza-${flavor.category}` as Product['category'],
-      price: flavor.price,
-      inStock: getMassaQuantity('pizza') > 0,
-      stockQuantity: getMassaQuantity('pizza'),
-    })),
-    
-    // Sabores de Esfiha (exibir quantidade da massa)
-    ...state.esfihaFlavors.map(flavor => ({
-      id: `esfiha-${flavor.id}`,
-      name: `Esfiha ${flavor.name}`,
-      category: `esfiha-${flavor.category}` as Product['category'],
-      price: flavor.price,
-      inStock: getMassaQuantity('esfiha') > 0,
-      stockQuantity: getMassaQuantity('esfiha'),
-    })),
-  ];
-
-  const filteredProducts = allProducts.filter(product => {
+  const filteredProducts = state.products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
-    let matchesCategory = selectedCategory === 'todos';
-    
-    if (selectedCategory === 'massas') {
-      matchesCategory = product.id.startsWith('massa-');
-    } else if (selectedCategory !== 'todos') {
-      matchesCategory = product.category === selectedCategory;
-    }
-    
+    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const startEdit = (product: Product) => {
-    // Só permite editar bebidas e massas
-    if (product.category === 'bebida' || product.id.startsWith('massa-')) {
-      setEditingProduct(product.id);
-      setEditForm(product);
-    }
+    setEditingProduct(product.id);
+    setEditForm(product);
   };
 
   const cancelEdit = () => {
@@ -92,47 +45,82 @@ const ProductManagement: React.FC = () => {
   };
 
   const saveEdit = () => {
-    if (editForm.id) {
-      dispatch({ type: 'UPDATE_PRODUCT', payload: editForm as Product });
+    if (editingProduct && editForm.name && editForm.price !== undefined) {
+      dispatch({
+        type: 'UPDATE_PRODUCT',
+        payload: {
+          id: editingProduct,
+          name: editForm.name,
+          category: editForm.category!,
+          price: editForm.price,
+          inStock: editForm.inStock!,
+          description: editForm.description,
+        },
+      });
       setEditingProduct(null);
       setEditForm({});
     }
   };
 
   const addProduct = () => {
-    if (newProductForm.name && newProductForm.price !== undefined) {
+    if (newProductForm.name && newProductForm.category && newProductForm.price !== undefined) {
       const newProduct: Product = {
-        id: `custom-${Date.now()}`,
+        id: `product-${Date.now()}`,
         name: newProductForm.name,
-        category: newProductForm.category || 'bebida',
+        category: newProductForm.category as Product['category'],
         price: newProductForm.price,
         inStock: newProductForm.inStock || true,
-        stockQuantity: newProductForm.stockQuantity || 0,
+        description: newProductForm.description,
       };
-      
-      dispatch({ type: 'ADD_PRODUCT', payload: newProduct });
+
+      dispatch({ type: 'UPDATE_PRODUCT', payload: newProduct });
       setNewProductForm({
         name: '',
         category: 'bebida',
         price: 0,
         inStock: true,
-        stockQuantity: 0,
       });
       setShowNewProduct(false);
     }
   };
 
+  // Dados adicionais para pizzas e esfihas (só visualização)
+  const pizzaData = state.pizzaFlavors.map(flavor => ({
+    id: `pizza-${flavor.id}`,
+    name: `Pizza ${flavor.name}`,
+    category: `pizza-${flavor.category}` as Product['category'],
+    price: flavor.price,
+    inStock: true,
+  }));
+
+  const esfihaData = state.esfihaFlavors.map(flavor => ({
+    id: `esfiha-${flavor.id}`,
+    name: `Esfiha ${flavor.name}`,
+    category: `esfiha-${flavor.category}` as Product['category'],
+    price: flavor.price,
+    inStock: true,
+  }));
+
+  const allProducts = [
+    ...state.products,
+    ...pizzaData,
+    ...esfihaData,
+  ].filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
   return (
-    <div className="p-6">
+    <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 flex items-center">
               <Package className="w-8 h-8 mr-3 text-red-600" />
               Gestão de Produtos
             </h1>
-            <p className="text-gray-600 mt-2">Controle de massas, bebidas e estoque</p>
+            <p className="text-gray-600">Gerencie o catálogo e controle de estoque</p>
           </div>
           <button
             onClick={() => setShowNewProduct(true)}
@@ -141,31 +129,6 @@ const ProductManagement: React.FC = () => {
             <Plus className="w-4 h-4 mr-2" />
             Novo Produto
           </button>
-        </div>
-
-        {/* Resumo de Massas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-xl shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold mb-1">Massas de Pizza</h3>
-                <p className="text-3xl font-bold">{getMassaQuantity('pizza')} unidades</p>
-                <p className="text-red-100 text-sm">Disponível para todos os sabores</p>
-              </div>
-              <PizzaIcon className="w-12 h-12 text-red-200" />
-            </div>
-          </div>
-          
-          <div className="bg-gradient-to-r from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold mb-1">Massas de Esfiha</h3>
-                <p className="text-3xl font-bold">{getMassaQuantity('esfiha')} unidades</p>
-                <p className="text-orange-100 text-sm">Disponível para todos os sabores</p>
-              </div>
-              <Coffee className="w-12 h-12 text-orange-200" />
-            </div>
-          </div>
         </div>
 
         {/* Filters */}
@@ -230,15 +193,6 @@ const ProductManagement: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade em Estoque</label>
-                  <input
-                    type="number"
-                    value={newProductForm.stockQuantity}
-                    onChange={(e) => setNewProductForm({ ...newProductForm, stockQuantity: parseInt(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  />
-                </div>
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -283,10 +237,7 @@ const ProductManagement: React.FC = () => {
                     Preço
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Quantidade
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    Estoque
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ações
@@ -294,10 +245,8 @@ const ProductManagement: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredProducts.map((product) => (
-                  <tr key={product.id} className={`hover:bg-gray-50 ${
-                    product.id.startsWith('massa-') ? 'bg-yellow-50' : ''
-                  }`}>
+                {allProducts.map((product) => (
+                  <tr key={product.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       {editingProduct === product.id ? (
                         <input
@@ -307,20 +256,12 @@ const ProductManagement: React.FC = () => {
                           className="w-full px-2 py-1 border border-gray-300 rounded"
                         />
                       ) : (
-                        <div className="text-sm font-medium text-gray-900">
-                          {product.name}
-                          {product.id.startsWith('massa-') && (
-                            <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                              CONTROLE
-                            </span>
-                          )}
-                        </div>
+                        <div className="text-sm font-medium text-gray-900">{product.name}</div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                        {product.id.startsWith('massa-') ? 'Controle de Massa' : 
-                         categories[product.category as keyof typeof categories] || product.category}
+                        {categories[product.category as keyof typeof categories] || product.category}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -333,34 +274,7 @@ const ProductManagement: React.FC = () => {
                           className="w-20 px-2 py-1 border border-gray-300 rounded"
                         />
                       ) : (
-                        <div className="text-sm text-gray-900 font-medium">
-                          {product.id.startsWith('massa-') ? '-' : `R$ ${product.price.toFixed(2)}`}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {editingProduct === product.id ? (
-                        <input
-                          type="number"
-                          value={editForm.stockQuantity}
-                          onChange={(e) => setEditForm({ ...editForm, stockQuantity: parseInt(e.target.value) })}
-                          className="w-16 px-2 py-1 border border-gray-300 rounded"
-                        />
-                      ) : (
-                        <div className="text-sm text-gray-900 font-medium">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            product.stockQuantity > 10 ? 'bg-green-100 text-green-800' :
-                            product.stockQuantity > 0 ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
-                            {product.stockQuantity} {product.id.startsWith('massa-') ? 'massas' : 'unid'}
-                          </span>
-                          {(product.id.startsWith('pizza-') || product.id.startsWith('esfiha-')) && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              * Baseado na massa disponível
-                            </div>
-                          )}
-                        </div>
+                        <div className="text-sm text-gray-900 font-medium">R$ {product.price.toFixed(2)}</div>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -372,9 +286,9 @@ const ProductManagement: React.FC = () => {
                         />
                       ) : (
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          product.inStock && product.stockQuantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          product.inStock ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
-                          {product.inStock && product.stockQuantity > 0 ? '✓ Disponível' : '⚠️ Fora de estoque'}
+                          {product.inStock ? '✓ Disponível' : '⚠️ Fora de estoque'}
                         </span>
                       )}
                     </td>
@@ -395,22 +309,20 @@ const ProductManagement: React.FC = () => {
                           </button>
                         </div>
                       ) : (
-                        <>
-                          {(product.category === 'bebida' || product.id.startsWith('massa-')) && (
-                            <button
-                              onClick={() => startEdit(product)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                          )}
-                          {product.id.startsWith('pizza-') && (
-                            <span className="text-xs text-gray-500">Sabor de pizza</span>
-                          )}
-                          {product.id.startsWith('esfiha-') && (
-                            <span className="text-xs text-gray-500">Sabor de esfiha</span>
-                          )}
-                        </>
+                        product.category === 'bebida' && (
+                          <button
+                            onClick={() => startEdit(product)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )
+                      )}
+                      {product.id.startsWith('pizza-') && (
+                        <span className="text-xs text-gray-500">Sabor de pizza</span>
+                      )}
+                      {product.id.startsWith('esfiha-') && (
+                        <span className="text-xs text-gray-500">Sabor de esfiha</span>
                       )}
                     </td>
                   </tr>
@@ -423,23 +335,25 @@ const ProductManagement: React.FC = () => {
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
           <div className="bg-white p-6 rounded-xl shadow-lg text-center">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">Massas de Pizza</h3>
-            <p className="text-3xl font-bold text-red-600">{getMassaQuantity('pizza')}</p>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow-lg text-center">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">Massas de Esfiha</h3>
-            <p className="text-3xl font-bold text-orange-600">{getMassaQuantity('esfiha')}</p>
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">Total de Produtos</h3>
+            <p className="text-3xl font-bold text-blue-600">{allProducts.length}</p>
           </div>
           <div className="bg-white p-6 rounded-xl shadow-lg text-center">
             <h3 className="text-lg font-semibold text-gray-700 mb-2">Bebidas</h3>
             <p className="text-3xl font-bold text-green-600">
-              {state.products.filter(p => !p.id.startsWith('massa-')).length}
+              {allProducts.filter(p => p.category === 'bebida').length}
             </p>
           </div>
           <div className="bg-white p-6 rounded-xl shadow-lg text-center">
-            <h3 className="text-lg font-semibold text-gray-700 mb-2">Sabores Disponíveis</h3>
-            <p className="text-3xl font-bold text-blue-600">
-              {state.pizzaFlavors.length + state.esfihaFlavors.length}
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">Pizzas</h3>
+            <p className="text-3xl font-bold text-red-600">
+              {allProducts.filter(p => p.category.includes('pizza')).length}
+            </p>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-lg text-center">
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">Esfihas</h3>
+            <p className="text-3xl font-bold text-orange-600">
+              {allProducts.filter(p => p.category.includes('esfiha')).length}
             </p>
           </div>
         </div>

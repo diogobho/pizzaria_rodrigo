@@ -48,7 +48,6 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ onClose, onAddToOrder }) =>
   const calculatePrice = () => {
     if (!format || selectedFlavors.length === 0) return 0;
 
-    // Base price - highest category flavor
     const flavorPrices = selectedFlavors.map(flavorId => {
       const flavor = state.pizzaFlavors.find(f => f.id === flavorId);
       return flavor ? flavor.price : 0;
@@ -56,12 +55,10 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ onClose, onAddToOrder }) =>
     
     let basePrice = Math.max(...flavorPrices);
     
-    // Size adjustment (média = -20%, grande = normal)
     if (size === 'media') {
       basePrice *= 0.8;
     }
 
-    // Border price
     const highestCategory = selectedFlavors.reduce((highest, flavorId) => {
       const flavor = state.pizzaFlavors.find(f => f.id === flavorId);
       if (!flavor) return highest;
@@ -71,8 +68,6 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ onClose, onAddToOrder }) =>
     }, 'tradicional' as 'tradicional' | 'premium' | 'especial');
 
     const borderPrice = border ? getBorderPrice(border, highestCategory) : 0;
-
-    // Extras price
     const extrasPrice = extras.reduce((total, extra) => total + extra.price, 0);
 
     return (basePrice + borderPrice + extrasPrice) * quantity;
@@ -163,15 +158,27 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ onClose, onAddToOrder }) =>
     onAddToOrder(pizzaOrder);
   };
 
+  const stepTitles = {
+    format: 'Formato',
+    size: 'Tamanho',
+    flavors: 'Sabores',
+    border: 'Borda',
+    extras: 'Extras',
+    summary: 'Resumo'
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center">
             <Pizza className="w-6 h-6 mr-2 text-red-600" />
-            Montar Pizza - {step === 'format' ? 'Formato' : step === 'size' ? 'Tamanho' : step === 'flavors' ? 'Sabores' : step === 'border' ? 'Borda' : step === 'extras' ? 'Adicionais' : 'Resumo'}
+            Montar Pizza - {stepTitles[step]}
           </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700"
+          >
             <X className="w-6 h-6" />
           </button>
         </div>
@@ -179,40 +186,29 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ onClose, onAddToOrder }) =>
         <div className="p-6">
           {step === 'format' && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold mb-4">Escolha o formato:</h3>
+              <h3 className="text-lg font-semibold mb-4">Como você quer sua pizza?</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   onClick={() => setFormat('inteira')}
-                  className={`p-6 border-2 rounded-xl transition-all ${
-                    format === 'inteira' 
-                      ? 'border-red-500 bg-red-50 text-red-700' 
+                  className={`p-6 border-2 rounded-xl text-center transition-all ${
+                    format === 'inteira'
+                      ? 'border-red-500 bg-red-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-red-600 rounded-full mx-auto mb-3 flex items-center justify-center">
-                      <Pizza className="w-8 h-8 text-white" />
-                    </div>
-                    <h4 className="font-bold text-lg">INTEIRA</h4>
-                    <p className="text-sm text-gray-600">1 sabor em toda a pizza</p>
-                  </div>
+                  <h4 className="text-xl font-bold mb-2">Pizza Inteira</h4>
+                  <p className="text-gray-600">Um sabor para toda a pizza</p>
                 </button>
-
                 <button
                   onClick={() => setFormat('meia-meia')}
-                  className={`p-6 border-2 rounded-xl transition-all ${
-                    format === 'meia-meia' 
-                      ? 'border-red-500 bg-red-50 text-red-700' 
+                  className={`p-6 border-2 rounded-xl text-center transition-all ${
+                    format === 'meia-meia'
+                      ? 'border-red-500 bg-red-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-orange-600 rounded-full mx-auto mb-3 flex items-center justify-center">
-                      <Pizza className="w-8 h-8 text-white" />
-                    </div>
-                    <h4 className="font-bold text-lg">MEIA-MEIA</h4>
-                    <p className="text-sm text-gray-600">2 sabores, cada metade diferente</p>
-                  </div>
+                  <h4 className="text-xl font-bold mb-2">Meia a Meia</h4>
+                  <p className="text-gray-600">Dois sabores diferentes</p>
                 </button>
               </div>
             </div>
@@ -224,34 +220,27 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ onClose, onAddToOrder }) =>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <button
                   onClick={() => setSize('media')}
-                  className={`p-6 border-2 rounded-xl transition-all ${
-                    size === 'media' 
-                      ? 'border-red-500 bg-red-50 text-red-700' 
+                  className={`p-6 border-2 rounded-xl text-center transition-all ${
+                    size === 'media'
+                      ? 'border-red-500 bg-red-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="text-center">
-                    <div className="w-12 h-12 bg-yellow-600 rounded-full mx-auto mb-3"></div>
-                    <h4 className="font-bold text-lg">MÉDIA</h4>
-                    <p className="text-sm text-gray-600">4-6 pedaços • 25cm</p>
-                    <p className="text-sm text-green-600">-20% no preço</p>
-                  </div>
+                  <h4 className="text-xl font-bold mb-2">Média</h4>
+                  <p className="text-gray-600">6 fatias • Ideal para 2-3 pessoas</p>
+                  <p className="text-lg font-bold text-red-600 mt-2">20% de desconto</p>
                 </button>
-
                 <button
                   onClick={() => setSize('grande')}
-                  className={`p-6 border-2 rounded-xl transition-all ${
-                    size === 'grande' 
-                      ? 'border-red-500 bg-red-50 text-red-700' 
+                  className={`p-6 border-2 rounded-xl text-center transition-all ${
+                    size === 'grande'
+                      ? 'border-red-500 bg-red-50'
                       : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
-                  <div className="text-center">
-                    <div className="w-16 h-16 bg-red-600 rounded-full mx-auto mb-3"></div>
-                    <h4 className="font-bold text-lg">GRANDE</h4>
-                    <p className="text-sm text-gray-600">8 pedaços • 35cm</p>
-                    <p className="text-sm text-blue-600">Tamanho padrão</p>
-                  </div>
+                  <h4 className="text-xl font-bold mb-2">Grande</h4>
+                  <p className="text-gray-600">8 fatias • Ideal para 4-5 pessoas</p>
+                  <p className="text-lg font-bold text-red-600 mt-2">Preço normal</p>
                 </button>
               </div>
             </div>
@@ -260,7 +249,7 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ onClose, onAddToOrder }) =>
           {step === 'flavors' && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold mb-4">
-                Sabores {format === 'meia-meia' && `(${selectedFlavors.length}/2 selecionados)`}:
+                Escolha {format === 'inteira' ? '1 sabor' : '2 sabores'}:
               </h3>
               
               <div className="flex space-x-2 mb-4">
@@ -279,13 +268,17 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ onClose, onAddToOrder }) =>
                 ))}
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
-                {state.pizzaFlavors.filter(f => f.category === selectedCategory).map((flavor) => (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
+                {state.pizzaFlavors
+                  .filter(flavor => flavor.category === selectedCategory)
+                  .map((flavor) => (
                   <button
                     key={flavor.id}
                     onClick={() => handleFlavorSelect(flavor.id)}
-                    disabled={format === 'meia-meia' && selectedFlavors.length >= 2 && !selectedFlavors.includes(flavor.id)}
-                    className={`p-4 border-2 rounded-lg text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                    disabled={!selectedFlavors.includes(flavor.id) && 
+                             ((format === 'inteira' && selectedFlavors.length >= 1) ||
+                              (format === 'meia-meia' && selectedFlavors.length >= 2))}
+                    className={`p-3 border-2 rounded-lg text-left transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                       selectedFlavors.includes(flavor.id)
                         ? 'border-red-500 bg-red-50'
                         : 'border-gray-200 hover:border-gray-300'
@@ -440,7 +433,7 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ onClose, onAddToOrder }) =>
                       >
                         -
                       </button>
-                      <span className="text-xl font-bold w-8 text-center">{quantity}</span>
+                      <span className="text-lg font-bold">{quantity}</span>
                       <button
                         onClick={() => setQuantity(quantity + 1)}
                         className="w-8 h-8 bg-gray-300 hover:bg-gray-400 rounded-full flex items-center justify-center"
@@ -449,56 +442,64 @@ const PizzaBuilder: React.FC<PizzaBuilderProps> = ({ onClose, onAddToOrder }) =>
                       </button>
                     </div>
                   </div>
-                </div>
-                
-                <div className="mt-4 pt-4 border-t border-gray-300">
-                  <div className="flex justify-between items-center">
+                  
+                  <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-300">
                     <span className="text-xl font-bold">TOTAL:</span>
-                    <span className="text-3xl font-bold text-red-600">
+                    <span className="text-2xl font-bold text-red-600">
                       R$ {calculatePrice().toFixed(2)}
                     </span>
                   </div>
                 </div>
               </div>
-              
-              <button
-                onClick={handleFinalize}
-                className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-lg font-bold text-lg transition-colors"
-              >
-                Adicionar ao Pedido
-              </button>
             </div>
           )}
         </div>
 
         <div className="flex justify-between items-center p-6 border-t bg-gray-50">
-          <button
-            onClick={handleBack}
-            disabled={step === 'format'}
-            className="flex items-center px-4 py-2 bg-gray-300 hover:bg-gray-400 disabled:bg-gray-200 disabled:cursor-not-allowed text-gray-700 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Voltar
-          </button>
-
-          <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">
-              R$ {calculatePrice().toFixed(2)}
-            </div>
-            <div className="text-sm text-gray-600">Total atual</div>
+          <div>
+            {step !== 'format' && (
+              <button
+                onClick={handleBack}
+                className="flex items-center text-gray-600 hover:text-gray-800"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Voltar
+              </button>
+            )}
           </div>
-
-          <button
-            onClick={handleNext}
-            disabled={
-              (step === 'format' && !format) ||
-              (step === 'flavors' && (selectedFlavors.length === 0 || (format === 'meia-meia' && selectedFlavors.length < 2)))
-            }
-            className="flex items-center px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-          >
-            {step === 'summary' ? 'Finalizar' : 'Próximo'}
-            <ArrowRight className="w-4 h-4 ml-2" />
-          </button>
+          
+          <div className="text-center">
+            <p className="text-lg font-bold text-red-600">
+              Total: R$ {calculatePrice().toFixed(2)}
+            </p>
+          </div>
+          
+          <div>
+            {step === 'summary' ? (
+              <button
+                onClick={handleFinalize}
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg flex items-center"
+              >
+                Adicionar ao Pedido
+              </button>
+            ) : (
+              <button
+                onClick={handleNext}
+                disabled={
+                  (step === 'format' && !format) ||
+                  (step === 'flavors' && (
+                    selectedFlavors.length === 0 ||
+                    (format === 'inteira' && selectedFlavors.length !== 1) ||
+                    (format === 'meia-meia' && selectedFlavors.length !== 2)
+                  ))
+                }
+                className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Próximo
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -22,6 +22,15 @@ export interface Product {
   stockQuantity: number;
 }
 
+export interface DeliveryPerson {
+  id: string;
+  name: string;
+  transport: 'pe' | 'bicicleta' | 'moto';
+  phone?: string;
+  active: boolean;
+  createdAt: Date;
+}
+
 export interface PizzaOrder {
   id: string;
   format: 'inteira' | 'meia-meia';
@@ -61,7 +70,7 @@ export interface Order {
   createdAt: Date;
   updatedAt: Date;
   observations?: string;
-  deliveryPerson?: string;
+  deliveryPersonId?: string;
   scheduledDateTime?: Date;
   isScheduled: boolean;
   deliveredAt?: Date;
@@ -82,7 +91,9 @@ export interface EsfihaFlavor {
 }
 
 export interface DeliveryStats {
-  deliveryPerson: string;
+  deliveryPersonId: string;
+  deliveryPersonName: string;
+  transport: string;
   totalDeliveries: number;
   todayDeliveries: number;
   totalValue: number;

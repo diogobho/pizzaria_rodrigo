@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { User, Order, Product, Customer, PizzaFlavor, EsfihaFlavor } from '../types';
+import { User, Order, Product, Customer, PizzaFlavor, EsfihaFlavor, DeliveryPerson } from '../types';
 
 interface AppState {
   user: User | null;
@@ -8,6 +8,7 @@ interface AppState {
   pizzaFlavors: PizzaFlavor[];
   esfihaFlavors: EsfihaFlavor[];
   customers: Customer[];
+  deliveryPersons: DeliveryPerson[];
   orderCounter: number;
 }
 
@@ -20,6 +21,9 @@ type AppAction =
   | { type: 'ADD_CUSTOMER'; payload: Customer }
   | { type: 'UPDATE_PRODUCT'; payload: Product }
   | { type: 'ADD_PRODUCT'; payload: Product }
+  | { type: 'ADD_DELIVERY_PERSON'; payload: DeliveryPerson }
+  | { type: 'UPDATE_DELIVERY_PERSON'; payload: DeliveryPerson }
+  | { type: 'DELETE_DELIVERY_PERSON'; payload: string }
   | { type: 'REDUCE_STOCK'; payload: { productId: string; quantity: number } };
 
 const initialState: AppState = {
@@ -37,6 +41,12 @@ const initialState: AppState = {
     { id: 'guarana-lata', name: 'Guaraná Lata', category: 'bebida', price: 3.50, inStock: true, stockQuantity: 36 },
     { id: 'agua', name: 'Água 500ml', category: 'bebida', price: 2.00, inStock: true, stockQuantity: 50 },
     { id: 'suco', name: 'Suco Natural', category: 'bebida', price: 5.00, inStock: true, stockQuantity: 15 },
+  ],
+  deliveryPersons: [
+    { id: '1', name: 'João Silva', transport: 'moto', phone: '(11) 91234-5678', active: true, createdAt: new Date() },
+    { id: '2', name: 'Maria Santos', transport: 'bicicleta', phone: '(11) 92345-6789', active: true, createdAt: new Date() },
+    { id: '3', name: 'Pedro Oliveira', transport: 'moto', phone: '(11) 93456-7890', active: true, createdAt: new Date() },
+    { id: '4', name: 'Ana Costa', transport: 'pe', phone: '(11) 94567-8901', active: true, createdAt: new Date() },
   ],
   pizzaFlavors: [
     // Tradicionais
@@ -66,7 +76,7 @@ const initialState: AppState = {
     { id: 'pizza', name: 'Pizza', category: 'tradicional', price: 2.50 },
     // Premium
     { id: 'carne-seca', name: 'Carne Seca', category: 'premium', price: 3.50 },
-    { id: 'frango-catupiry', name: 'Frango Catupiry', category: 'premium', price: 3.50 },
+    { id: 'frango-catupiry-esfiha', name: 'Frango Catupiry', category: 'premium', price: 3.50 },
     { id: 'camarao-esfirra', name: 'Camarão', category: 'premium', price: 3.50 },
     // Especiais
     { id: 'chocolate-esfirra', name: 'Chocolate', category: 'especial', price: 3.50 },
@@ -123,6 +133,26 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         products: [...state.products, action.payload],
+      };
+
+    case 'ADD_DELIVERY_PERSON':
+      return {
+        ...state,
+        deliveryPersons: [...state.deliveryPersons, action.payload],
+      };
+
+    case 'UPDATE_DELIVERY_PERSON':
+      return {
+        ...state,
+        deliveryPersons: state.deliveryPersons.map(person =>
+          person.id === action.payload.id ? action.payload : person
+        ),
+      };
+
+    case 'DELETE_DELIVERY_PERSON':
+      return {
+        ...state,
+        deliveryPersons: state.deliveryPersons.filter(person => person.id !== action.payload),
       };
     
     case 'REDUCE_STOCK':

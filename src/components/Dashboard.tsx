@@ -17,19 +17,10 @@ const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'pizza' | 'esfiha' | 'bebida'>('pizza');
   const [showPizzaBuilder, setShowPizzaBuilder] = useState(false);
   const [orderObservations, setOrderObservations] = useState('');
-  const [deliveryPerson, setDeliveryPerson] = useState('');
+  const [deliveryPersonId, setDeliveryPersonId] = useState('');
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
-
-  // Lista de entregadores
-  const deliveryPersons = [
-    'João Silva',
-    'Maria Santos',
-    'Pedro Oliveira',
-    'Ana Costa',
-    'Carlos Souza'
-  ];
 
   // Função para obter quantidade de massa
   const getMassaQuantity = (type: 'pizza' | 'esfiha') => {
@@ -139,23 +130,25 @@ const Dashboard: React.FC = () => {
   };
 
   const handleFinishOrder = () => {
+    // Validações básicas
     if (!currentCustomer.name || !currentCustomer.phone || currentOrder.length === 0) {
       alert('Preencha os dados do cliente e adicione pelo menos um item ao pedido');
       return;
     }
 
-    if (!deliveryPerson) {
+    if (!deliveryPersonId) {
       alert('Selecione um entregador para o pedido');
       return;
     }
 
-    if (isScheduled && (!scheduledDate || !scheduledTime)) {
-      alert('Preencha a data e horário para agendamento');
-      return;
-    }
-
+    // Validações de agendamento
     let scheduledDateTime: Date | undefined;
-    if (isScheduled && scheduledDate && scheduledTime) {
+    if (isScheduled) {
+      if (!scheduledDate || !scheduledTime) {
+        alert('Preencha a data e horário para agendamento');
+        return;
+      }
+
       scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
       
       // Verificar se a data agendada é no futuro
@@ -165,21 +158,23 @@ const Dashboard: React.FC = () => {
       }
     }
 
+    // Criar o pedido - CORRIGIDO
     const newOrder = {
       id: uuidv4(),
       orderNumber: state.orderCounter,
       customer: { ...currentCustomer, id: uuidv4() },
       items: currentOrder,
       totalPrice: getTotalPrice(),
-      status: isScheduled ? 'nao-iniciado' : 'nao-iniciado' as const,
+      status: 'nao-iniciado' as const,
       createdAt: new Date(),
       updatedAt: new Date(),
-      observations: orderObservations,
-      deliveryPerson,
+      observations: orderObservations || undefined,
+      deliveryPersonId,
       scheduledDateTime,
-      isScheduled: isScheduled || false,
+      isScheduled: isScheduled,
     };
 
+    // Disparar ações
     dispatch({ type: 'ADD_ORDER', payload: newOrder });
     dispatch({ type: 'ADD_CUSTOMER', payload: newOrder.customer });
 
@@ -187,7 +182,7 @@ const Dashboard: React.FC = () => {
     setCurrentCustomer({ name: '', phone: '', address: '', complement: '' });
     setCurrentOrder([]);
     setOrderObservations('');
-    setDeliveryPerson('');
+    setDeliveryPersonId('');
     setIsScheduled(false);
     setScheduledDate('');
     setScheduledTime('');
@@ -285,13 +280,15 @@ const Dashboard: React.FC = () => {
                   Entregador
                 </label>
                 <select
-                  value={deliveryPerson}
-                  onChange={(e) => setDeliveryPerson(e.target.value)}
+                  value={deliveryPersonId}
+                  onChange={(e) => setDeliveryPersonId(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
                 >
                   <option value="">Selecione um entregador</option>
-                  {deliveryPersons.map((person) => (
-                    <option key={person} value={person}>{person}</option>
+                  {state.deliveryPersons.filter(p => p.active).map((person) => (
+                    <option key={person.id} value={person.id}>
+                      {person.name} ({person.transport === 'pe' ? 'A pé' : person.transport === 'bicicleta' ? 'Bicicleta' : 'Moto'})
+                    </option>
                   ))}
                 </select>
               </div>
@@ -482,10 +479,10 @@ const Dashboard: React.FC = () => {
                 {currentCustomer.complement && (
                   <p className="text-sm text-gray-600">{currentCustomer.complement}</p>
                 )}
-                {deliveryPerson && (
+                {deliveryPersonId && (
                   <p className="text-sm text-blue-600 font-medium mt-1">
                     <Truck className="w-4 h-4 inline mr-1" />
-                    {deliveryPerson}
+                    {state.deliveryPersons.find(p => p.id === deliveryPersonId)?.name}
                   </p>
                 )}
                 {isScheduled && scheduledDate && scheduledTime && (

@@ -21,6 +21,10 @@ type AppAction =
   | { type: 'ADD_CUSTOMER'; payload: Customer }
   | { type: 'UPDATE_PRODUCT'; payload: Product }
   | { type: 'ADD_PRODUCT'; payload: Product }
+  | { type: 'ADD_PIZZA_FLAVOR'; payload: PizzaFlavor }
+  | { type: 'UPDATE_PIZZA_FLAVOR'; payload: PizzaFlavor }
+  | { type: 'ADD_ESFIHA_FLAVOR'; payload: EsfihaFlavor }
+  | { type: 'UPDATE_ESFIHA_FLAVOR'; payload: EsfihaFlavor }
   | { type: 'ADD_DELIVERY_PERSON'; payload: DeliveryPerson }
   | { type: 'UPDATE_DELIVERY_PERSON'; payload: DeliveryPerson }
   | { type: 'DELETE_DELIVERY_PERSON'; payload: string }
@@ -133,6 +137,34 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return {
         ...state,
         products: [...state.products, action.payload],
+      };
+
+    case 'ADD_PIZZA_FLAVOR':
+      return {
+        ...state,
+        pizzaFlavors: [...state.pizzaFlavors, action.payload],
+      };
+
+    case 'UPDATE_PIZZA_FLAVOR':
+      return {
+        ...state,
+        pizzaFlavors: state.pizzaFlavors.map(flavor =>
+          flavor.id === action.payload.id ? action.payload : flavor
+        ),
+      };
+
+    case 'ADD_ESFIHA_FLAVOR':
+      return {
+        ...state,
+        esfihaFlavors: [...state.esfihaFlavors, action.payload],
+      };
+
+    case 'UPDATE_ESFIHA_FLAVOR':
+      return {
+        ...state,
+        esfihaFlavors: state.esfihaFlavors.map(flavor =>
+          flavor.id === action.payload.id ? action.payload : flavor
+        ),
       };
 
     case 'ADD_DELIVERY_PERSON':

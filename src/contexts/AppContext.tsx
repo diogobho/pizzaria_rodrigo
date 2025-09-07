@@ -14,20 +14,20 @@ interface AppState {
 }
 
 type AppAction =
+  | { type: 'LOGIN'; payload: User }
+  | { type: 'LOGOUT' }
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_PRODUCTS'; payload: Product[] }
-  | { type: 'SET_PIZZA_FLAVORS'; payload: PizzaFlavor[] }
-  | { type: 'SET_ESFIHA_FLAVORS'; payload: EsfihaFlavor[] }
-  | { type: 'SET_DELIVERY_PERSONS'; payload: DeliveryPerson[] }
-  | { type: 'SET_ORDERS'; payload: Order[] }
+  | { type: 'SET_DATA'; payload: { products: Product[], pizzaFlavors: PizzaFlavor[], esfihaFlavors: EsfihaFlavor[], deliveryPersons: DeliveryPerson[], orders: Order[] } }
   | { type: 'ADD_ORDER'; payload: Order }
   | { type: 'UPDATE_ORDER'; payload: Order }
   | { type: 'DELETE_ORDER'; payload: string }
-  | { type: 'LOGIN'; payload: User }
-  | { type: 'LOGOUT' };
+  | { type: 'ADD_CUSTOMER'; payload: Customer }
+  | { type: 'UPDATE_PRODUCT'; payload: Product }
+  | { type: 'ADD_PRODUCT'; payload: Product }
+  | { type: 'REDUCE_STOCK'; payload: { productId: string; quantity: number } };
 
 const initialState: AppState = {
-  user: null,
+  user: { id: '1', username: 'admin', name: 'Administrador' }, // Auto-login para simplificar
   orders: [],
   products: [],
   pizzaFlavors: [],
@@ -35,25 +35,34 @@ const initialState: AppState = {
   customers: [],
   deliveryPersons: [],
   orderCounter: 1,
-  loading: false,
+  loading: true,
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
+    case 'LOGIN':
+      return { ...state, user: action.payload };
+    case 'LOGOUT':
+      return { ...state, user: null };
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
-    case 'SET_PRODUCTS':
-      return { ...state, products: action.payload };
-    case 'SET_PIZZA_FLAVORS':
-      return { ...state, pizzaFlavors: action.payload };
-    case 'SET_ESFIHA_FLAVORS':
-      return { ...state, esfihaFlavors: action.payload };
-    case 'SET_DELIVERY_PERSONS':
-      return { ...state, deliveryPersons: action.payload };
-    case 'SET_ORDERS':
-      return { ...state, orders: action.payload };
+    case 'SET_DATA':
+      return {
+        ...state,
+        products: action.payload.products,
+        pizzaFlavors: action.payload.pizzaFlavors,
+        esfihaFlavors: action.payload.esfihaFlavors,
+        deliveryPersons: action.payload.deliveryPersons,
+        orders: action.payload.orders,
+        orderCounter: Math.max(1, ...action.payload.orders.map(o => o.orderNumber || 0)) + 1,
+        loading: false,
+      };
     case 'ADD_ORDER':
-      return { ...state, orders: [action.payload, ...state.orders] };
+      return {
+        ...state,
+        orders: [action.payload, ...state.orders],
+        orderCounter: state.orderCounter + 1,
+      };
     case 'UPDATE_ORDER':
       return {
         ...state,
@@ -66,54 +75,118 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...state,
         orders: state.orders.filter(order => order.id !== action.payload),
       };
-    case 'LOGIN':
-      return { ...state, user: action.payload };
-    case 'LOGOUT':
-      return { ...state, user: null };
+    case 'ADD_CUSTOMER':
+      const existingCustomer = state.customers.find(c => c.phone === action.payload.phone);
+      if (existingCustomer) {
+        return {
+          ...state,
+          customers: state.customers.map(c =>
+            c.phone === action.payload.phone ? action.payload : c
+          ),
+        };
+      }
+      return {
+        ...state,
+        customers: [...state.customers, action.payload],
+      };
+    case 'UPDATE_PRODUCT':
+      return {
+        ...state,
+        products: state.products.map(product =>
+          product.id === action.payload.id ? action.payload : product
+        ),
+      };
+    case 'ADD_PRODUCT':
+      return {
+        ...state,
+        products: [...state.products, action.payload],
+      };
+    case 'REDUCE_STOCK':
+      return {
+        ...state,
+        products: state.products.map(product =>
+          product.id === action.payload.productId
+            ? {
+                ...product,
+                stockQuantity: Math.max(0, product.stockQuantity - action.payload.quantity),
+                inStock: product.stockQuantity - action.payload.quantity > 0,
+              }
+            : product
+        ),
+      };
     default:
       return state;
   }
 }
 
-const API_BASE = 'http://localhost:3001/api';
-
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
-  // Funções que fazem requisições para API
-  loadInitialData: () => Promise<void>;
   createOrder: (orderData: any) => Promise<void>;
-  updateOrderStatus: (orderId: string, status: string) => Promise<void>;
-  deleteOrder: (orderId: string) => Promise<void>;
 } | null>(null);
+
+const API_BASE = 'http://localhost:3001/api';
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // Carregar dados iniciais do banco
-  const loadInitialData = async () => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-    
-    try {
-      const [products, pizzaFlavors, esfihaFlavors, deliveryPersons, orders] = await Promise.all([
-        fetch(`${API_BASE}/products`).then(r => r.json()),
-        fetch(`${API_BASE}/flavors/pizza`).then(r => r.json()),
-        fetch(`${API_BASE}/flavors/esfiha`).then(r => r.json()),
-        fetch(`${API_BASE}/delivery/persons`).then(r => r.json()),
-        fetch(`${API_BASE}/orders`).then(r => r.json()),
-      ]);
+  // Carregar dados do banco
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        console.log('Carregando dados do banco...');
+        
+        const [productsRes, pizzaRes, esfihaRes, deliveryRes, ordersRes] = await Promise.all([
+          fetch(`${API_BASE}/products`),
+          fetch(`${API_BASE}/flavors/pizza`),
+          fetch(`${API_BASE}/flavors/esfiha`),
+          fetch(`${API_BASE}/delivery/persons`),
+          fetch(`${API_BASE}/orders`),
+        ]);
 
-      dispatch({ type: 'SET_PRODUCTS', payload: products });
-      dispatch({ type: 'SET_PIZZA_FLAVORS', payload: pizzaFlavors });
-      dispatch({ type: 'SET_ESFIHA_FLAVORS', payload: esfihaFlavors });
-      dispatch({ type: 'SET_DELIVERY_PERSONS', payload: deliveryPersons });
-      dispatch({ type: 'SET_ORDERS', payload: orders });
-    } catch (error) {
-      console.error('Erro ao carregar dados:', error);
-    } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
-    }
-  };
+        const [products, pizzaFlavors, esfihaFlavors, deliveryPersons, orders] = await Promise.all([
+          productsRes.json(),
+          pizzaRes.json(),
+          esfihaRes.json(),
+          deliveryRes.json(),
+          ordersRes.json(),
+        ]);
+
+        console.log('Dados carregados:', { products: products.length, pizzaFlavors: pizzaFlavors.length, deliveryPersons: deliveryPersons.length });
+
+        dispatch({
+          type: 'SET_DATA',
+          payload: { products, pizzaFlavors, esfihaFlavors, deliveryPersons, orders }
+        });
+
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        // Em caso de erro, usar dados fallback locais
+        const fallbackData = {
+          products: [
+            { id: 'coca-2l', name: 'Coca-Cola 2L', category: 'bebida', price: 8.00, inStock: true, stockQuantity: 25 },
+            { id: 'guarana-2l', name: 'Guaraná 2L', category: 'bebida', price: 8.00, inStock: true, stockQuantity: 25 },
+          ],
+          pizzaFlavors: [
+            { id: 'margherita', name: 'Margherita', category: 'tradicional', price: 25.00 },
+            { id: 'calabresa', name: 'Calabresa', category: 'tradicional', price: 25.00 },
+          ],
+          esfihaFlavors: [
+            { id: 'carne', name: 'Carne', category: 'tradicional', price: 2.50 },
+            { id: 'frango', name: 'Frango', category: 'tradicional', price: 2.50 },
+          ],
+          deliveryPersons: [
+            { id: '1', name: 'João Silva', transport: 'moto', phone: '(11) 91234-5678', active: true, createdAt: new Date() },
+          ],
+          orders: []
+        };
+        
+        dispatch({ type: 'SET_DATA', payload: fallbackData });
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Criar pedido no banco
   const createOrder = async (orderData: any) => {
@@ -124,69 +197,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         body: JSON.stringify(orderData),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erro ao criar pedido');
+      if (response.ok) {
+        const newOrder = await response.json();
+        dispatch({ type: 'ADD_ORDER', payload: newOrder });
+        console.log('Pedido salvo no banco:', newOrder.orderNumber);
+      } else {
+        throw new Error('Erro ao salvar pedido');
       }
-
-      const newOrder = await response.json();
-      dispatch({ type: 'ADD_ORDER', payload: newOrder });
-      
-      // Recarregar dados para atualizar estoque
-      await loadInitialData();
-      
-      return newOrder;
     } catch (error) {
       console.error('Erro ao criar pedido:', error);
-      throw error;
+      // Fallback: salvar localmente se banco falhar
+      dispatch({ type: 'ADD_ORDER', payload: orderData });
+      alert('Pedido salvo localmente (banco offline)');
     }
   };
-
-  // Atualizar status do pedido
-  const updateOrderStatus = async (orderId: string, status: string) => {
-    try {
-      const response = await fetch(`${API_BASE}/orders/${orderId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-
-      const updatedOrder = await response.json();
-      dispatch({ type: 'UPDATE_ORDER', payload: updatedOrder });
-    } catch (error) {
-      console.error('Erro ao atualizar pedido:', error);
-      throw error;
-    }
-  };
-
-  // Deletar pedido
-  const deleteOrder = async (orderId: string) => {
-    try {
-      await fetch(`${API_BASE}/orders/${orderId}`, {
-        method: 'DELETE',
-      });
-
-      dispatch({ type: 'DELETE_ORDER', payload: orderId });
-    } catch (error) {
-      console.error('Erro ao deletar pedido:', error);
-      throw error;
-    }
-  };
-
-  // Carregar dados ao inicializar
-  useEffect(() => {
-    loadInitialData();
-  }, []);
 
   return (
-    <AppContext.Provider value={{ 
-      state, 
-      dispatch, 
-      loadInitialData,
-      createOrder,
-      updateOrderStatus,
-      deleteOrder
-    }}>
+    <AppContext.Provider value={{ state, dispatch, createOrder }}>
       {children}
     </AppContext.Provider>
   );

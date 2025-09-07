@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import TestProducts from './TestProducts';
 import { useApp } from '../contexts/AppContext';
 import { OrderItem, Customer, PizzaOrder } from '../types';
 import { Phone, MapPin, User, Pizza, Coffee, Wine, ShoppingCart, Plus, X, Clock, Truck } from 'lucide-react';
@@ -212,7 +211,6 @@ const Dashboard: React.FC = () => {
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard - Novo Pedido</h1>
-        <TestProducts />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Coluna 1 - Dados do Cliente */}

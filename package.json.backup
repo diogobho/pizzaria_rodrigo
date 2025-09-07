@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "dev:backend": "tsx watch backend/server.ts",
-    "dev:frontend": "vite --host",
+    "dev:frontend": "vite",
     "build:backend": "tsc --build",
     "build:frontend": "vite build",
     "start:backend": "node backend/server.js",

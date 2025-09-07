@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { User, Order, Product, Customer, PizzaFlavor, EsfihaFlavor, DeliveryPerson } from '../types';
 
 interface AppState {
@@ -10,101 +10,50 @@ interface AppState {
   customers: Customer[];
   deliveryPersons: DeliveryPerson[];
   orderCounter: number;
+  loading: boolean;
 }
 
 type AppAction =
-  | { type: 'LOGIN'; payload: User }
-  | { type: 'LOGOUT' }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_PRODUCTS'; payload: Product[] }
+  | { type: 'SET_PIZZA_FLAVORS'; payload: PizzaFlavor[] }
+  | { type: 'SET_ESFIHA_FLAVORS'; payload: EsfihaFlavor[] }
+  | { type: 'SET_DELIVERY_PERSONS'; payload: DeliveryPerson[] }
+  | { type: 'SET_ORDERS'; payload: Order[] }
   | { type: 'ADD_ORDER'; payload: Order }
   | { type: 'UPDATE_ORDER'; payload: Order }
   | { type: 'DELETE_ORDER'; payload: string }
-  | { type: 'ADD_CUSTOMER'; payload: Customer }
-  | { type: 'UPDATE_PRODUCT'; payload: Product }
-  | { type: 'ADD_PRODUCT'; payload: Product }
-  | { type: 'ADD_PIZZA_FLAVOR'; payload: PizzaFlavor }
-  | { type: 'UPDATE_PIZZA_FLAVOR'; payload: PizzaFlavor }
-  | { type: 'ADD_ESFIHA_FLAVOR'; payload: EsfihaFlavor }
-  | { type: 'UPDATE_ESFIHA_FLAVOR'; payload: EsfihaFlavor }
-  | { type: 'ADD_DELIVERY_PERSON'; payload: DeliveryPerson }
-  | { type: 'UPDATE_DELIVERY_PERSON'; payload: DeliveryPerson }
-  | { type: 'DELETE_DELIVERY_PERSON'; payload: string }
-  | { type: 'REDUCE_STOCK'; payload: { productId: string; quantity: number } };
+  | { type: 'LOGIN'; payload: User }
+  | { type: 'LOGOUT' };
 
 const initialState: AppState = {
   user: null,
   orders: [],
-  products: [
-    // Controle de Massas
-    { id: 'massa-pizza', name: 'Massa de Pizza', category: 'bebida', price: 0, inStock: true, stockQuantity: 50 },
-    { id: 'massa-esfiha', name: 'Massa de Esfiha', category: 'bebida', price: 0, inStock: true, stockQuantity: 100 },
-    
-    // Bebidas
-    { id: 'coca-2l', name: 'Coca-Cola 2L', category: 'bebida', price: 8.00, inStock: true, stockQuantity: 25 },
-    { id: 'guarana-2l', name: 'Guaraná 2L', category: 'bebida', price: 8.00, inStock: true, stockQuantity: 20 },
-    { id: 'coca-lata', name: 'Coca-Cola Lata', category: 'bebida', price: 3.50, inStock: true, stockQuantity: 48 },
-    { id: 'guarana-lata', name: 'Guaraná Lata', category: 'bebida', price: 3.50, inStock: true, stockQuantity: 36 },
-    { id: 'agua', name: 'Água 500ml', category: 'bebida', price: 2.00, inStock: true, stockQuantity: 50 },
-    { id: 'suco', name: 'Suco Natural', category: 'bebida', price: 5.00, inStock: true, stockQuantity: 15 },
-  ],
-  deliveryPersons: [
-    { id: '1', name: 'João Silva', transport: 'moto', phone: '(11) 91234-5678', active: true, createdAt: new Date() },
-    { id: '2', name: 'Maria Santos', transport: 'bicicleta', phone: '(11) 92345-6789', active: true, createdAt: new Date() },
-    { id: '3', name: 'Pedro Oliveira', transport: 'moto', phone: '(11) 93456-7890', active: true, createdAt: new Date() },
-    { id: '4', name: 'Ana Costa', transport: 'pe', phone: '(11) 94567-8901', active: true, createdAt: new Date() },
-  ],
-  pizzaFlavors: [
-    // Tradicionais
-    { id: 'margherita', name: 'Margherita', category: 'tradicional', price: 25.00 },
-    { id: 'calabresa', name: 'Calabresa', category: 'tradicional', price: 25.00 },
-    { id: 'portuguesa', name: 'Portuguesa', category: 'tradicional', price: 25.00 },
-    { id: 'mussarela', name: 'Mussarela', category: 'tradicional', price: 25.00 },
-    { id: 'napolitana', name: 'Napolitana', category: 'tradicional', price: 25.00 },
-    // Premium
-    { id: 'frango-catupiry', name: 'Frango Catupiry', category: 'premium', price: 27.00 },
-    { id: 'bacon', name: 'Bacon', category: 'premium', price: 27.00 },
-    { id: 'quatro-queijos', name: 'Quatro Queijos', category: 'premium', price: 27.00 },
-    { id: 'pepperoni', name: 'Pepperoni', category: 'premium', price: 27.00 },
-    { id: 'toscana', name: 'Toscana', category: 'premium', price: 27.00 },
-    // Especiais
-    { id: 'camarao', name: 'Camarão', category: 'especial', price: 32.00 },
-    { id: 'salmao', name: 'Salmão', category: 'especial', price: 32.00 },
-    { id: 'vegetariana-gourmet', name: 'Vegetariana Gourmet', category: 'especial', price: 32.00 },
-    { id: 'chocolate', name: 'Chocolate', category: 'especial', price: 32.00 },
-    { id: 'banana-nevada', name: 'Banana Nevada', category: 'especial', price: 32.00 },
-  ],
-  esfihaFlavors: [
-    // Tradicionais
-    { id: 'carne', name: 'Carne', category: 'tradicional', price: 2.50 },
-    { id: 'frango', name: 'Frango', category: 'tradicional', price: 2.50 },
-    { id: 'queijo', name: 'Queijo', category: 'tradicional', price: 2.50 },
-    { id: 'pizza', name: 'Pizza', category: 'tradicional', price: 2.50 },
-    // Premium
-    { id: 'carne-seca', name: 'Carne Seca', category: 'premium', price: 3.50 },
-    { id: 'frango-catupiry-esfiha', name: 'Frango Catupiry', category: 'premium', price: 3.50 },
-    { id: 'camarao-esfirra', name: 'Camarão', category: 'premium', price: 3.50 },
-    // Especiais
-    { id: 'chocolate-esfirra', name: 'Chocolate', category: 'especial', price: 3.50 },
-    { id: 'doce-leite', name: 'Doce de Leite', category: 'especial', price: 3.50 },
-  ],
+  products: [],
+  pizzaFlavors: [],
+  esfihaFlavors: [],
   customers: [],
+  deliveryPersons: [],
   orderCounter: 1,
+  loading: false,
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
-    case 'LOGIN':
-      return { ...state, user: action.payload };
-    
-    case 'LOGOUT':
-      return { ...state, user: null };
-    
+    case 'SET_LOADING':
+      return { ...state, loading: action.payload };
+    case 'SET_PRODUCTS':
+      return { ...state, products: action.payload };
+    case 'SET_PIZZA_FLAVORS':
+      return { ...state, pizzaFlavors: action.payload };
+    case 'SET_ESFIHA_FLAVORS':
+      return { ...state, esfihaFlavors: action.payload };
+    case 'SET_DELIVERY_PERSONS':
+      return { ...state, deliveryPersons: action.payload };
+    case 'SET_ORDERS':
+      return { ...state, orders: action.payload };
     case 'ADD_ORDER':
-      return {
-        ...state,
-        orders: [...state.orders, action.payload],
-        orderCounter: state.orderCounter + 1,
-      };
-    
+      return { ...state, orders: [action.payload, ...state.orders] };
     case 'UPDATE_ORDER':
       return {
         ...state,
@@ -112,112 +61,132 @@ function appReducer(state: AppState, action: AppAction): AppState {
           order.id === action.payload.id ? action.payload : order
         ),
       };
-    
     case 'DELETE_ORDER':
       return {
         ...state,
         orders: state.orders.filter(order => order.id !== action.payload),
       };
-    
-    case 'ADD_CUSTOMER':
-      return {
-        ...state,
-        customers: [...state.customers, action.payload],
-      };
-    
-    case 'UPDATE_PRODUCT':
-      return {
-        ...state,
-        products: state.products.map(product =>
-          product.id === action.payload.id ? action.payload : product
-        ),
-      };
-    
-    case 'ADD_PRODUCT':
-      return {
-        ...state,
-        products: [...state.products, action.payload],
-      };
-
-    case 'ADD_PIZZA_FLAVOR':
-      return {
-        ...state,
-        pizzaFlavors: [...state.pizzaFlavors, action.payload],
-      };
-
-    case 'UPDATE_PIZZA_FLAVOR':
-      return {
-        ...state,
-        pizzaFlavors: state.pizzaFlavors.map(flavor =>
-          flavor.id === action.payload.id ? action.payload : flavor
-        ),
-      };
-
-    case 'ADD_ESFIHA_FLAVOR':
-      return {
-        ...state,
-        esfihaFlavors: [...state.esfihaFlavors, action.payload],
-      };
-
-    case 'UPDATE_ESFIHA_FLAVOR':
-      return {
-        ...state,
-        esfihaFlavors: state.esfihaFlavors.map(flavor =>
-          flavor.id === action.payload.id ? action.payload : flavor
-        ),
-      };
-
-    case 'ADD_DELIVERY_PERSON':
-      return {
-        ...state,
-        deliveryPersons: [...state.deliveryPersons, action.payload],
-      };
-
-    case 'UPDATE_DELIVERY_PERSON':
-      return {
-        ...state,
-        deliveryPersons: state.deliveryPersons.map(person =>
-          person.id === action.payload.id ? action.payload : person
-        ),
-      };
-
-    case 'DELETE_DELIVERY_PERSON':
-      return {
-        ...state,
-        deliveryPersons: state.deliveryPersons.filter(person => person.id !== action.payload),
-      };
-    
-    case 'REDUCE_STOCK':
-      return {
-        ...state,
-        products: state.products.map(product => {
-          if (product.id === action.payload.productId) {
-            const newQuantity = Math.max(0, product.stockQuantity - action.payload.quantity);
-            return {
-              ...product,
-              stockQuantity: newQuantity,
-              inStock: newQuantity > 0
-            };
-          }
-          return product;
-        }),
-      };
-    
+    case 'LOGIN':
+      return { ...state, user: action.payload };
+    case 'LOGOUT':
+      return { ...state, user: null };
     default:
       return state;
   }
 }
 
+const API_BASE = 'http://localhost:3001/api';
+
 const AppContext = createContext<{
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
+  // Funções que fazem requisições para API
+  loadInitialData: () => Promise<void>;
+  createOrder: (orderData: any) => Promise<void>;
+  updateOrderStatus: (orderId: string, status: string) => Promise<void>;
+  deleteOrder: (orderId: string) => Promise<void>;
 } | null>(null);
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
+  // Carregar dados iniciais do banco
+  const loadInitialData = async () => {
+    dispatch({ type: 'SET_LOADING', payload: true });
+    
+    try {
+      const [products, pizzaFlavors, esfihaFlavors, deliveryPersons, orders] = await Promise.all([
+        fetch(`${API_BASE}/products`).then(r => r.json()),
+        fetch(`${API_BASE}/flavors/pizza`).then(r => r.json()),
+        fetch(`${API_BASE}/flavors/esfiha`).then(r => r.json()),
+        fetch(`${API_BASE}/delivery/persons`).then(r => r.json()),
+        fetch(`${API_BASE}/orders`).then(r => r.json()),
+      ]);
+
+      dispatch({ type: 'SET_PRODUCTS', payload: products });
+      dispatch({ type: 'SET_PIZZA_FLAVORS', payload: pizzaFlavors });
+      dispatch({ type: 'SET_ESFIHA_FLAVORS', payload: esfihaFlavors });
+      dispatch({ type: 'SET_DELIVERY_PERSONS', payload: deliveryPersons });
+      dispatch({ type: 'SET_ORDERS', payload: orders });
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: false });
+    }
+  };
+
+  // Criar pedido no banco
+  const createOrder = async (orderData: any) => {
+    try {
+      const response = await fetch(`${API_BASE}/orders`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Erro ao criar pedido');
+      }
+
+      const newOrder = await response.json();
+      dispatch({ type: 'ADD_ORDER', payload: newOrder });
+      
+      // Recarregar dados para atualizar estoque
+      await loadInitialData();
+      
+      return newOrder;
+    } catch (error) {
+      console.error('Erro ao criar pedido:', error);
+      throw error;
+    }
+  };
+
+  // Atualizar status do pedido
+  const updateOrderStatus = async (orderId: string, status: string) => {
+    try {
+      const response = await fetch(`${API_BASE}/orders/${orderId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+
+      const updatedOrder = await response.json();
+      dispatch({ type: 'UPDATE_ORDER', payload: updatedOrder });
+    } catch (error) {
+      console.error('Erro ao atualizar pedido:', error);
+      throw error;
+    }
+  };
+
+  // Deletar pedido
+  const deleteOrder = async (orderId: string) => {
+    try {
+      await fetch(`${API_BASE}/orders/${orderId}`, {
+        method: 'DELETE',
+      });
+
+      dispatch({ type: 'DELETE_ORDER', payload: orderId });
+    } catch (error) {
+      console.error('Erro ao deletar pedido:', error);
+      throw error;
+    }
+  };
+
+  // Carregar dados ao inicializar
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={{ 
+      state, 
+      dispatch, 
+      loadInitialData,
+      createOrder,
+      updateOrderStatus,
+      deleteOrder
+    }}>
       {children}
     </AppContext.Provider>
   );
@@ -226,7 +195,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 export const useApp = () => {
   const context = useContext(AppContext);
   if (!context) {
-    throw new Error('useApp deve ser usado dentro de AppProvider');
+    throw new Error('useApp must be used within an AppProvider');
   }
   return context;
 };

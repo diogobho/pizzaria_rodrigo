@@ -151,85 +151,43 @@ const Dashboard: React.FC = () => {
 
       scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`);
       
+      // Verificar se a data agendada é no futuro
       if (scheduledDateTime <= new Date()) {
         alert('A data/hora agendada deve ser no futuro');
         return;
       }
     }
 
-    try {
-      // CRIAR PEDIDO VIA API
-      const orderData = {
-        customer: { ...currentCustomer, id: uuidv4() },
-        items: currentOrder,
-        totalPrice: getTotalPrice(),
-        deliveryPersonId: String(deliveryPersonId),
-        observations: orderObservations || undefined,
-        isScheduled: isScheduled,
-        scheduledDateTime: scheduledDateTime?.toISOString()
-      };
+    // Criar o pedido - CORRIGIDO
+    const newOrder = {
+      id: uuidv4(),
+      orderNumber: state.orderCounter,
+      customer: { ...currentCustomer, id: uuidv4() },
+      items: currentOrder,
+      totalPrice: getTotalPrice(),
+      status: 'nao-iniciado' as const,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      observations: orderObservations || undefined,
+      deliveryPersonId,
+      scheduledDateTime,
+      isScheduled: isScheduled,
+    };
 
-      const response = await fetch('http://localhost:3001/api/orders', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderData)
-      });
+    // Disparar ações
+    dispatch({ type: 'ADD_ORDER', payload: newOrder });
+    dispatch({ type: 'ADD_CUSTOMER', payload: newOrder.customer });
 
-      if (response.ok) {
-        const result = await response.json();
-        alert(`✅ Pedido #${result.orderNumber} criado no PostgreSQL!`);
-        
-        dispatch({ type: 'ADD_ORDER', payload: result });
-        dispatch({ type: 'ADD_CUSTOMER', payload: result.customer });
-        
-        // Reset form
-        setCurrentCustomer({ name: '', phone: '', address: '', complement: '' });
-        setCurrentOrder([]);
-        setOrderObservations('');
-        setDeliveryPersonId('');
-        setIsScheduled(false);
-        setScheduledDate('');
-        setScheduledTime('');
-        
-      } else {
-        throw new Error('Falha na API');
-      }
-      
-    } catch (error) {
-      console.error('API offline, salvando localmente:', error);
-      
-      // FALLBACK LOCAL se API falhar
-      const newOrder = {
-        id: uuidv4(),
-        orderNumber: state.orderCounter,
-        customer: { ...currentCustomer, id: uuidv4() },
-        items: currentOrder,
-        totalPrice: getTotalPrice(),
-        status: 'nao-iniciado' as const,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        observations: orderObservations || undefined,
-        deliveryPersonId,
-        scheduledDateTime,
-        isScheduled: isScheduled,
-      };
+    // Reset form
+    setCurrentCustomer({ name: '', phone: '', address: '', complement: '' });
+    setCurrentOrder([]);
+    setOrderObservations('');
+    setDeliveryPersonId('');
+    setIsScheduled(false);
+    setScheduledDate('');
+    setScheduledTime('');
 
-      dispatch({ type: 'ADD_ORDER', payload: newOrder });
-      dispatch({ type: 'ADD_CUSTOMER', payload: newOrder.customer });
-      
-      // Reset form
-      setCurrentCustomer({ name: '', phone: '', address: '', complement: '' });
-      setCurrentOrder([]);
-      setOrderObservations('');
-      setDeliveryPersonId('');
-      setIsScheduled(false);
-      setScheduledDate('');
-      setScheduledTime('');
-      
-      alert(`⚠️ API offline - Pedido #${state.orderCounter} salvo localmente`);
-    }
-
-    const scheduleText = isScheduled ?
+    const scheduleText = isScheduled ? ` (AGENDADO para ${scheduledDateTime?.toLocaleString()})` : '';
     alert(`Pedido #${newOrder.orderNumber} criado com sucesso!${scheduleText}`);
   };
 

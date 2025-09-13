@@ -7,6 +7,28 @@ const OrdersKanban: React.FC = () => {
   const { state, dispatch } = useApp();
   const [showStats, setShowStats] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [orders, setOrders] = useState<Order[]>(state.orders);
+
+  // Carregar pedidos da API em tempo real
+  useEffect(() => {
+    const loadApiOrders = async () => {
+      try {
+        const response = await fetch("http://localhost:3001/api/orders");
+        if (response.ok) {
+          const apiOrders = await response.json();
+          setOrders(apiOrders);
+          console.log("✅ Pedidos carregados da API:", apiOrders.length);
+        } else {
+          setOrders(state.orders);
+        }
+      } catch (error) {
+        console.log("⚠️ API offline, usando dados locais");
+        setOrders(state.orders);
+      }
+    };
+    
+    loadApiOrders();
+  }, [state.orders]);
 
   const moveOrder = (orderId: string, newStatus: Order['status']) => {
     const order = state.orders.find(o => o.id === orderId);
@@ -129,7 +151,7 @@ const OrdersKanban: React.FC = () => {
   };
 
   // Filtrar pedidos por data selecionada
-  const filteredOrders = state.orders.filter(order => {
+  const filteredOrders = orders.filter(order => {
     const orderDate = new Date(order.createdAt).toISOString().split('T')[0];
     return orderDate === selectedDate;
   });

@@ -7,109 +7,42 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  username  String   @unique
-  name      String
-  password  String
-  role      String   @default("admin")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("users")
-}
-
-model Customer {
-  id         String   @id @default(cuid())
+model customers {
+  id         String   @id
   name       String
   phone      String   @unique
   address    String
   complement String?
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  orders     Order[]
+  updatedAt  DateTime
+  orders     orders[]
 
   @@index([phone], map: "idx_customers_phone")
-  @@map("customers")
 }
 
-model DeliveryPerson {
-  id        String   @id @default(cuid())
+model delivery_persons {
+  id        String   @id
   name      String
   transport String
   phone     String?
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  orders    Order[]
-
-  @@map("delivery_persons")
+  updatedAt DateTime
+  orders    orders[]
 }
 
-model Product {
-  id            String      @id @default(cuid())
-  name          String
-  category      String
-  price         Float
-  inStock       Boolean     @default(true)
-  stockQuantity Int         @default(0)
-  description   String?
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
-  stock         Int?        @default(0)
-  in_stock      Boolean?    @default(true)
-  orderItems    OrderItem[]
-
-  @@map("products")
-}
-
-model PizzaFlavor {
-  id        String   @id @default(cuid())
+model esfiha_flavors {
+  id        String   @id
   name      String   @unique
   category  String
   price     Float
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("pizza_flavors")
+  updatedAt DateTime
 }
 
-model EsfihaFlavor {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  category  String
-  price     Float
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("esfiha_flavors")
-}
-
-model Order {
-  id                String          @id @default(cuid())
-  orderNumber       Int             @unique
-  customerId        String
-  deliveryPersonId  String?
-  totalPrice        Float
-  status            String          @default("nao-iniciado")
-  observations      String?
-  isScheduled       Boolean         @default(false)
-  scheduledDateTime DateTime?
-  deliveredAt       DateTime?
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
-  items             OrderItem[]
-  customer          Customer        @relation(fields: [customerId], references: [id])
-  deliveryPerson    DeliveryPerson? @relation(fields: [deliveryPersonId], references: [id])
-
-  @@index([status], map: "idx_orders_status")
-  @@map("orders")
-}
-
-model OrderItem {
-  id           String   @id @default(cuid())
+model order_items {
+  id           String    @id
   orderId      String
   type         String
   productId    String?
@@ -119,10 +52,64 @@ model OrderItem {
   totalPrice   Float
   observations String?
   pizzaDetails Json?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product      Product? @relation(fields: [productId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime
+  orders       orders    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  products     products? @relation(fields: [productId], references: [id])
+}
 
-  @@map("order_items")
+model orders {
+  id                String            @id
+  orderNumber       Int               @unique
+  customerId        String
+  deliveryPersonId  String?
+  totalPrice        Float
+  status            String            @default("nao-iniciado")
+  observations      String?
+  isScheduled       Boolean           @default(false)
+  scheduledDateTime DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime
+  order_number      Int               @unique @default(autoincrement())
+  order_items       order_items[]
+  customers         customers         @relation(fields: [customerId], references: [id])
+  delivery_persons  delivery_persons? @relation(fields: [deliveryPersonId], references: [id])
+
+  @@index([status], map: "idx_orders_status")
+}
+
+model pizza_flavors {
+  id        String   @id
+  name      String   @unique
+  category  String
+  price     Float
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+}
+
+model products {
+  id            String        @id
+  name          String
+  category      String
+  price         Float
+  inStock       Boolean       @default(true)
+  stockQuantity Int           @default(0)
+  description   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime
+  stock         Int?          @default(0)
+  in_stock      Boolean?      @default(true)
+  order_items   order_items[]
+}
+
+model users {
+  id        String   @id
+  username  String   @unique
+  name      String
+  password  String
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+  updatedAt DateTime
 }

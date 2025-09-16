@@ -207,12 +207,12 @@ app.post('/api/orders', async (req, res) => {
     }
     
     // Gerar número do pedido
-    const orderNumberResult = await client.query('SELECT COALESCE(MAX("orderNumber"), 0) + 1 as next_number FROM orders');
+    const orderNumberResult = await client.query('SELECT COALESCE(MAX(order_number), 0) + 1 as next_number FROM orders');
     const orderNumber = orderNumberResult.rows[0].next_number;
     
     // Inserir pedido
     const orderResult = await client.query(
-      `INSERT INTO orders ("orderNumber", "customerId", "deliveryPersonId", "totalPrice", status, observations) 
+      `INSERT INTO orders (order_number, customer_id, delivery_person_id, total_price, status, observations) 
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at`,
       [orderNumber, customerId, deliveryPersonId, totalPrice, 'nao-iniciado', observations]
     );
@@ -224,7 +224,7 @@ app.post('/api/orders', async (req, res) => {
     for (const item of items) {
       // Inserir item
       await client.query(
-        `INSERT INTO order_items (order_id, product_name, quantity, unit_price, "totalPrice", product_type) 
+        `INSERT INTO order_items (order_id, product_name, quantity, unit_price, total_price, product_type) 
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [orderId, item.productName, item.quantity, item.unitPrice, item.totalPrice, item.type || 'bebida']
       );
@@ -274,8 +274,8 @@ app.get('/api/orders', async (req, res) => {
       SELECT o.*, c.name as customer_name, c.phone as customer_phone, c.address as customer_address,
              dp.name as delivery_person_name
       FROM orders o
-      JOIN customers c ON o."customerId" = c.id
-      LEFT JOIN delivery_persons dp ON o."deliveryPersonId" = dp.id
+      JOIN customers c ON o.customer_id = c.id
+      LEFT JOIN delivery_persons dp ON o.delivery_person_id = dp.id
       ORDER BY o.created_at DESC
     `);
     res.json(result.rows);

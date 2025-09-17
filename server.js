@@ -274,9 +274,9 @@ app.get('/api/orders', async (req, res) => {
       SELECT o.*, c.name as "customerName", c.phone as "customerPhone", c.address as "customerAddress",
              dp.name as delivery_person_name
       FROM orders o
-      JOIN customers c ON o.customerId = c.id
-      LEFT JOIN delivery_persons dp ON o.deliveryPersonId = dp.id
-      ORDER BY o.createdAt DESC
+      JOIN customers c ON o."customerId" = c.id
+      LEFT JOIN delivery_persons dp ON o."deliveryPersonId" = dp.id
+      ORDER BY o."createdAt" DESC
     `);
     res.json(result.rows);
   } catch (error) {

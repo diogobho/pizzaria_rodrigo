@@ -212,8 +212,8 @@ app.post('/api/orders', async (req, res) => {
     
     // Inserir pedido
     const orderResult = await client.query(
-      `INSERT INTO orders (order_number, customer_id, delivery_person_id, total_price, status, observations) 
-       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at`,
+      `INSERT INTO orders ("orderNumber", "customerId", "deliveryPersonId", "totalPrice", status, observations) 
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, "createdAt"`,
       [orderNumber, customerId, deliveryPersonId, totalPrice, 'nao-iniciado', observations]
     );
     
@@ -224,7 +224,7 @@ app.post('/api/orders', async (req, res) => {
     for (const item of items) {
       // Inserir item
       await client.query(
-        `INSERT INTO order_items (order_id, product_name, quantity, unit_price, total_price, product_type) 
+        `INSERT INTO order_items ("orderId", "productName", quantity, "unitPrice", "totalPrice", type) 
          VALUES ($1, $2, $3, $4, $5, $6)`,
         [orderId, item.productName, item.quantity, item.unitPrice, item.totalPrice, item.type || 'bebida']
       );

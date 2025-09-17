@@ -1,3 +1,31 @@
+app.get('/api/orders', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT o.*, 
+             c.name, c.phone, c.address,
+             dp.name as delivery_person_name
+      FROM orders o
+      JOIN customers c ON o."customerId" = c.id
+      LEFT JOIN delivery_persons dp ON o."deliveryPersonId" = dp.id
+      ORDER BY o."createdAt" DESC
+    `);
+    
+    // Formatar para o frontend
+    const formattedOrders = result.rows.map(order => ({
+      ...order,
+      customer: {
+        name: order.name,
+        phone: order.phone,
+        address: order.address
+      }
+    }));
+    
+    res.json(formattedOrders);
+  } catch (error) {
+    console.error('Erro ao buscar pedidos:', error);
+    res.json([]);
+  });
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -51,7 +79,7 @@ app.get('/api/products', async (req, res) => {
   try {
     // Buscar produtos base (bebidas e massas)
     const productsResult = await pool.query(`
-      SELECT id, name, category, price, stock, "inStock", 
+      SELECT id, name, category, price, stock, in_stock, 
              CASE WHEN category = 'massa' THEN 'CONTROLE' ELSE category END as display_category
       FROM products 
       ORDER BY 
@@ -94,7 +122,7 @@ app.get('/api/products', async (req, res) => {
         category: product.display_category,
         price: product.price,
         stock: product.stock,
-        inStock: product.inStock,
+        inStock: product.in_stock,
         type: product.category === 'massa' ? 'massa-control' : 'produto'
       });
     });
@@ -207,7 +235,7 @@ app.post('/api/orders', async (req, res) => {
     }
     
     // Gerar número do pedido
-    const orderNumberResult = await client.query('SELECT COALESCE(MAX("orderNumber"), 0) + 1 as next_number FROM orders');
+    const orderNumberResult = await client.query('SELECT COALESCE(MAX(order_number), 0) + 1 as next_number FROM orders');
     const orderNumber = orderNumberResult.rows[0].next_number;
     
     // Inserir pedido
@@ -218,7 +246,7 @@ app.post('/api/orders', async (req, res) => {
     );
     
     const orderId = orderResult.rows[0].id;
-    const createdAt = orderResult.rows[0].createdAt;
+    const createdAt = orderResult.rows[0].created_at;
     
     // Inserir itens e REDUZIR ESTOQUE
     for (const item of items) {
@@ -239,8 +267,8 @@ app.post('/api/orders', async (req, res) => {
       }
     }
     
-    // Atualizar status "inStock"
-    await client.query('UPDATE products SET "inStock" = (stock > 0)');
+    // Atualizar status in_stock
+    await client.query('UPDATE products SET in_stock = (stock > 0)');
     
     await client.query('COMMIT');
     
@@ -274,14 +302,15 @@ app.get('/api/orders', async (req, res) => {
       SELECT o.*, c.name as "customerName", c.phone as "customerPhone", c.address as "customerAddress",
              dp.name as delivery_person_name
       FROM orders o
-      JOIN customers c ON o.customerId = c.id
-      LEFT JOIN delivery_persons dp ON o.deliveryPersonId = dp.id
-      ORDER BY o.createdAt DESC
+      JOIN customers c ON o."customerId" = c.id
+      LEFT JOIN delivery_persons dp ON o."deliveryPersonId" = dp.id
+      ORDER BY o."createdAt" DESC
     `);
     res.json(result.rows);
   } catch (error) {
     console.error('Erro ao buscar pedidos:', error);
     res.json([]);
+  });
   }
 });
 

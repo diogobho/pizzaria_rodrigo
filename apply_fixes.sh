@@ -1,3 +1,17 @@
+#!/bin/bash
+
+echo "🔧 Aplicando correções específicas..."
+
+# Backup adicional
+echo "📋 Criando backup de segurança..."
+cp -r src src_backup_$(date +%Y%m%d_%H%M%S)
+
+# CORREÇÃO 1: Dashboard.tsx - Remover botões aninhados
+echo "🔧 Corrigindo botões aninhados no Dashboard..."
+cd src/components
+
+# Criar versão corrigida do Dashboard
+cat > Dashboard_fixed.tsx << 'DASHBOARD_EOF'
 import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../contexts/AppContext';
 import PizzaBuilder from './PizzaBuilder';
@@ -141,3 +155,82 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+DASHBOARD_EOF
+
+# Substituir arquivo original
+mv Dashboard.tsx Dashboard.tsx.original
+mv Dashboard_fixed.tsx Dashboard.tsx
+
+echo "✅ Dashboard.tsx corrigido!"
+
+# CORREÇÃO 2: OrdersKanban.tsx - Controlar múltiplos carregamentos
+echo "🔧 Corrigindo múltiplos carregamentos no OrdersKanban..."
+
+# Backup do OrdersKanban original
+cp OrdersKanban.tsx OrdersKanban.tsx.original
+
+# Aplicar correção pontual no useEffect
+sed -i '/useEffect.*{/a\
+  const loadedRef = React.useRef(false);\
+  if (loadedRef.current) return;\
+  loadedRef.current = true;' OrdersKanban.tsx
+
+# Adicionar import do useRef se não existir
+if ! grep -q "useRef" OrdersKanban.tsx; then
+  sed -i 's/import React/import React, { useRef }/' OrdersKanban.tsx
+fi
+
+echo "✅ OrdersKanban.tsx corrigido!"
+
+# CORREÇÃO 3: AppContext.tsx - Melhorar gerenciamento de estado
+echo "🔧 Melhorando gerenciamento de estado no AppContext..."
+cd ../contexts
+
+# Backup do contexto original
+cp AppContext.tsx AppContext.tsx.original
+
+# Adicionar função addOrder se não existir
+if ! grep -q "addOrder" AppContext.tsx; then
+  sed -i '/setOrders.*\[\]/a\
+\
+  const addOrder = (newOrder) => {\
+    setOrders(prevOrders => [newOrder, ...prevOrders]);\
+    console.log("✅ Novo pedido adicionado ao estado:", newOrder.orderNumber);\
+  };' AppContext.tsx
+
+  # Adicionar ao contexto value
+  sed -i 's/value={{.*orders.*loadOrders.*}}/value={{ orders, loadOrders, addOrder }}/' AppContext.tsx
+fi
+
+echo "✅ AppContext.tsx melhorado!"
+
+# Voltar ao diretório raiz
+cd ../../
+
+echo "🔄 Rebuilding aplicação..."
+npm run build
+
+if [ $? -eq 0 ]; then
+  echo "✅ Build bem-sucedido!"
+  
+  echo "🔄 Reiniciando frontend..."
+  pm2 restart pizzaria-frontend
+  
+  echo "⏳ Aguardando inicialização..."
+  sleep 3
+  
+  echo "🧪 Testando aplicação..."
+  if curl -s http://localhost:5173 > /dev/null; then
+    echo "✅ Aplicação está funcionando!"
+    echo "🌐 Acesse: http://$(curl -s ifconfig.me):5173"
+  else
+    echo "❌ Aplicação não está respondendo"
+  fi
+else
+  echo "❌ Erro no build. Verificando logs..."
+  npm run build
+fi
+
+echo "📊 Para monitorar: pm2 logs pizzaria-frontend"
+echo "🎯 Teste criando um pedido para verificar se os problemas foram corrigidos!"
+

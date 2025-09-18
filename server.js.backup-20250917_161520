@@ -218,7 +218,7 @@ app.post('/api/orders', async (req, res) => {
     );
     
     const orderId = orderResult.rows[0].id;
-    const createdAt = orderResult.rows[0]["createdAt"];
+    const createdAt = orderResult.rows[0]."createdAt";
     
     // Inserir itens e REDUZIR ESTOQUE
     for (const item of items) {
